@@ -12,6 +12,7 @@ typedef struct {
     json_t *json; 
     unsigned int line;
     const char *file;
+    char *msg;
 } ej_error_t;
 
 #define ej_error_create(err, msg) ej_error_create_impl(err,      \

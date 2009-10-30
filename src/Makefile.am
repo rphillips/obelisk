@@ -6,4 +6,6 @@ ej_CFLAGS = \
 	-I$(top_srcdir)/deps/jansson/src \
 	-I$(top_srcdir)/deps/libevent/libevent/include \
 	-I$(top_srcdir)/deps/libevent/libevent
-ej_SOURCES = ej.c
+ej_SOURCES = \
+	ej.c \
+	ej_error.c
