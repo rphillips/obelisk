@@ -72,7 +72,7 @@ done:
     }
     free(json_response);
 
-    evhttp_send_reply(req, HTTP_OK, "", evb);
+    evhttp_send_reply(req, HTTP_OK, "ej", evb);
 
     /* Free data */
     json_decref(js_rsp);
