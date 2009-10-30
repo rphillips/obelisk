@@ -1,1 +1,3 @@
-SUBDIRS = libevent/libevent
+SUBDIRS = \
+	libevent/libevent \
+	jansson

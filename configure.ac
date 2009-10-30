@@ -37,5 +37,5 @@ AC_CONFIG_FILES([deps/Makefile
                  src/Makefile 
                  Makefile
                 ])
-AC_CONFIG_SUBDIRS([deps/libevent/libevent])
+AC_CONFIG_SUBDIRS([deps/libevent/libevent deps/jansson])
 AC_OUTPUT
