@@ -3,18 +3,7 @@
 #include <jansson.h> /* json */
 #include <stdlib.h>
 #include <string.h>
-
-static json_t*
-error_object(const char *str)
-{
-    json_t *json = json_object();
-    {
-        json_t *json_str = json_string(str);
-        json_object_set(json, "error", json_str);
-        json_decref(json_str);
-    }
-    return json;
-}
+#include "ej_error.h"
 
 static void
 http_api_cb(struct evhttp_request *req, void *arg)
@@ -31,7 +20,7 @@ http_api_cb(struct evhttp_request *req, void *arg)
     /* Check for an empty request */
     if (request_length == 0) {
         /* Format Empty Request */
-        js_rsp = error_object("Empty Request");
+        js_rsp = ej_error_create(EJ_ERROR_GENERAL, "Empty Request");
         json_response = json_dumps(js_rsp, 0);
         evbuffer_add(evb, json_response, strlen(json_response));
         free(json_response);
@@ -44,7 +33,7 @@ http_api_cb(struct evhttp_request *req, void *arg)
     js_req = json_loads(json_request, &js_err);
     if (!js_req) {
         /* Format Parse Error */
-        js_rsp = error_object(js_err.text);
+        js_rsp = ej_error_create(EJ_ERROR_GENERAL, js_err.text);
         json_response = json_dumps(js_rsp, 0);
         evbuffer_add(evb, json_response, strlen(json_response));
         free(json_response);
