@@ -78,14 +78,14 @@ int
 main(int argc, const char *argv[])
 {
     int port = 9009;
-	struct event_base *base = event_base_new();
-	struct evhttp *http = evhttp_new(base);
+    struct event_base *base = event_base_new();
+    struct evhttp *http = evhttp_new(base);
 
-	evhttp_set_cb(http, "/api", http_api_cb, NULL);
+    evhttp_set_cb(http, "/api", http_api_cb, NULL);
 
-	evhttp_bind_socket(http, "127.0.0.1", port);
+    evhttp_bind_socket(http, "127.0.0.1", port);
 
-	event_base_dispatch(base);
+    event_base_dispatch(base);
     return 0;
 }
 
