@@ -30,6 +30,25 @@
 #include <string.h>
 #include "ej_error.h"
 
+/** 
+ * @brief Run the JSON-RPC Handler
+ * @param request The entire request object
+ * @param response response object, freed by caller
+ * @return EJ_SUCCESS on success
+ */
+static ej_error_t*
+ej_run_handle(json_t *request, json_t **response)
+{
+    /* Create Response */
+    *response = json_object();
+    {
+        json_t *json_str = json_string("Hello World");
+        json_object_set(*response, "universe", json_str);
+        json_decref(json_str);
+    }
+    return EJ_SUCCESS;
+}
+
 static void
 http_api_cb(struct evhttp_request *req, void *arg)
 {
@@ -56,16 +75,16 @@ http_api_cb(struct evhttp_request *req, void *arg)
     /* Check for an empty request */
     if (request_length == 0) {
         /* Format Empty Request */
-        ej_err = ej_error_create(EJ_ERROR_GENERAL, "Empty Request");
+        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
         js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
     }
-
-    /* Read Request */
-    json_request = evbuffer_pullup(evr, request_length);
+    
+    json_request=evbuffer_pullup(evr, request_length);
     if (json_request == NULL) {
-        ej_err = ej_error_create(EJ_ERROR_GENERAL, "Empty Request");
+        /* Format Empty Request */
+        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
         js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
@@ -75,19 +94,14 @@ http_api_cb(struct evhttp_request *req, void *arg)
     js_req = json_loads(json_request, &js_err);
     if (js_req == NULL) {
         /* Format Parse Error */
-        ej_err = ej_error_create(EJ_ERROR_GENERAL, js_err.text);
+        ej_err = ej_error_create(0, EJ_ERROR_PARSE, js_err.text);
         js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
     }
 
-    /* Create Response */
-    js_rsp = json_object();
-    {
-        json_t *json_str = json_string("Hello World");
-        json_object_set(js_rsp, "universe", json_str);
-        json_decref(json_str);
-    }
+    /* Run Handler */
+    ej_err = ej_run_handle(js_req, &js_rsp);
 
     /* Write data */
 done:

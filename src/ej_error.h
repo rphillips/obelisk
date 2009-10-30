@@ -29,7 +29,12 @@
 struct json_t;
 
 typedef enum {
-    EJ_ERROR_GENERAL,    
+    EJ_ERROR_PARSE,
+    EJ_ERROR_INVALID_REQUEST,
+    EJ_ERROR_METHOD_NOT_FOUND,
+    EJ_ERROR_INVALID_PARAMS,
+    EJ_ERROR_INTERNAL,
+    EJ_ERROR_SERVER,
 } ej_error_errno_t;
 
 typedef struct {
@@ -38,27 +43,32 @@ typedef struct {
     unsigned int line;
     const char *file;
     char *msg;
+    int id;
 } ej_error_t;
 
-#define ej_error_create(err, msg) ej_error_create_impl(err,      \
+#define EJ_SUCCESS (NULL)
+
+#define ej_error_create(id, err, msg) ej_error_create_impl(id, err,      \
                                                        msg,      \
                                                        __LINE__, \
                                                        __FILE__)
 
-#define ej_error_createf(err, fmt, ...) ej_error_createf_impl(err,      \
+#define ej_error_createf(id, err, fmt, ...) ej_error_createf_impl(id, err,      \
                                                               __LINE__, \
                                                               __FILE__, \
                                                               fmt,      \
                                                               __VA_ARGS__)
 
 ej_error_t*
-ej_error_create_impl(ej_error_errno_t errno,
+ej_error_create_impl(unsigned int id,
+                     ej_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
                      const char *file);
 
 ej_error_t*
-ej_error_createf_impl(ej_error_errno_t errno,
+ej_error_createf_impl(unsigned int id, 
+                      ej_error_errno_t errno,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,

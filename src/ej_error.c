@@ -36,20 +36,50 @@ ej_create_json_error(ej_error_t *err)
     err->json = json_object();
 
     {
-        json_t *json_str = json_string("error");
-        json_object_set(err->json, "type", json_str);
-        json_decref(json_str);
-    }
+        json_t *code_obj;
+        json_t *rpc_version = json_string("2.0");
+        json_t *error_obj = json_object();
+        json_t *msg_obj = json_string(err->msg);
+        json_t *id_obj = err->id ? json_integer(err->id) : json_null();
 
-    {
-        json_t *json_str = json_string(err->msg);
-        json_object_set(err->json, "message", json_str);
-        json_decref(json_str);
+        switch (err->errno) {
+            case EJ_ERROR_PARSE:
+                code_obj = json_integer(-32700);
+                break;
+            case EJ_ERROR_INVALID_REQUEST:
+                code_obj = json_integer(-32600);
+                break;
+            case EJ_ERROR_METHOD_NOT_FOUND:
+                code_obj = json_integer(-32601);
+                break;
+            case EJ_ERROR_INVALID_PARAMS:
+                code_obj = json_integer(-32602);
+                break;
+            case EJ_ERROR_INTERNAL:
+                code_obj = json_integer(-32603);
+                break;
+            case EJ_ERROR_SERVER:
+                code_obj = json_integer(-32000);
+                break;
+        }
+
+        json_object_set(err->json, "id", id_obj);
+        json_object_set(err->json, "jsonrpc", rpc_version);
+        json_object_set(err->json, "error", error_obj);
+        json_object_set(error_obj, "code", code_obj);
+        json_object_set(error_obj, "message", msg_obj);
+
+        json_decref(code_obj);
+        json_decref(msg_obj);
+        json_decref(error_obj);
+        json_decref(rpc_version);
+        json_decref(id_obj);
     }
 }
 
 ej_error_t*
-ej_error_create_impl(ej_error_errno_t errno,
+ej_error_create_impl(unsigned int id, 
+                     ej_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
                      const char *file)
@@ -58,13 +88,15 @@ ej_error_create_impl(ej_error_errno_t errno,
     err->errno = errno;
     err->line = line;
     err->file = file;
+    err->id = id;
     err->msg = strdup(msg);
     ej_create_json_error(err);
     return err;
 }
 
 ej_error_t*
-ej_error_createf_impl(ej_error_errno_t errno,
+ej_error_createf_impl(unsigned int id, 
+                      ej_error_errno_t errno,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,
@@ -77,6 +109,7 @@ ej_error_createf_impl(ej_error_errno_t errno,
     err->errno = errno;
     err->line = line;
     err->file = file;
+    err->id = id;
 
     va_start(args, fmt);
     vasprintf(&err->msg, fmt, args);
