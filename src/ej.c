@@ -36,8 +36,46 @@ typedef struct {
     unsigned int verbose;
 } ej_settings_t;
 
+static ej_error_t*
+ej_execute_rpc(json_t *request, json_t **response)
+{
+    ej_error_t *ej_err = EJ_SUCCESS;
+    json_t *method; 
+    json_t *params;
+    json_t *id;
+    int i_id = 0;
+    
+    /* fetch the ID first and make sure we have it, because we need it later */
+    if ((id = json_object_get(request, "id")) == NULL) {
+        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+                                 "id missing");
+    }
+
+    i_id = json_integer_value(id);
+
+    /* Check the method and params parameters */
+    if ((method = json_object_get(request, "method")) == NULL) {
+        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+                                 "method missing");
+    }
+    else if ((params = json_object_get(request, "params")) == NULL) {
+        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+                                 "params missing");
+    }
+    else {
+        *response = json_object();
+        {
+            json_t *json_str = json_string("Hello World");
+            json_object_set(*response, "universe", json_str);
+            json_decref(json_str);
+        }
+    }
+
+    return ej_err;
+}
+
 /** 
- * @brief Run the JSON-RPC Handler
+ * @brief Run the JSON-RPC handler
  * @param request The entire request object
  * @param response response object, freed by caller
  * @return EJ_SUCCESS on success
@@ -45,14 +83,36 @@ typedef struct {
 static ej_error_t*
 ej_run_handle(json_t *request, json_t **response)
 {
-    /* Create Response */
-    *response = json_object();
-    {
-        json_t *json_str = json_string("Hello World");
-        json_object_set(*response, "universe", json_str);
-        json_decref(json_str);
+    ej_error_t *ej_err = EJ_SUCCESS;
+    int array_size = json_array_size(request);
+    if (array_size == 0) { /* Single RPC Call */
+        ej_err = ej_execute_rpc(request, response);
     }
-    return EJ_SUCCESS;
+    else { /* Multi-RPC Call */
+        int i;
+        json_t *rsp_element;
+        json_t *req_element;
+        ej_error_t *rsp_err;
+
+        /* Create response array */
+        *response = json_array();
+
+        for (i=0; i<array_size; i++) {
+            req_element = json_array_get(request, i);
+            rsp_err = ej_execute_rpc(req_element, &rsp_element);
+            if (rsp_err) {
+                /* RPC call errored out */
+                json_array_append(*response, rsp_err->json);
+                ej_error_destroy(rsp_err);
+            }
+            else {
+                json_array_append(*response, rsp_element);
+                json_decref(rsp_element);
+            }
+        }
+    }
+
+    return ej_err;
 }
 
 static void
@@ -93,7 +153,7 @@ ej_api_cb(struct evhttp_request *req, void *arg)
         goto done;
     }
 
-    if (settings->verbose) {
+    if (settings->verbose > 1) {
         fprintf(stderr, "Request(%s:%i) %s\n",
                 req->remote_host,
                 req->remote_port, json_request);
@@ -111,6 +171,12 @@ ej_api_cb(struct evhttp_request *req, void *arg)
 
     /* Run Handler */
     ej_err = ej_run_handle(js_req, &js_rsp);
+    if (ej_err) {
+        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, ej_err->msg);
+        js_rsp = ej_err->json;
+        json_incref(js_rsp);
+        goto done;
+    }
 
     /* Write data */
 done:
@@ -135,7 +201,7 @@ ej_init(ej_settings_t *settings)
 }
 
 int 
-main(int argc, const char *argv[])
+main(int argc, char **argv)
 {
     int ch;
     const char *listen_addr = "0.0.0.0";
