@@ -1,2 +1,14 @@
 event-json is a fast JSON RPC server build upon libevent2. The JSON-RPC 2.0
 specification will be implemented shortly.
+
+Compile
+=======
+
+# ./autogen.sh
+# ./configure
+# make
+
+Running
+=======
+
+# src/ej

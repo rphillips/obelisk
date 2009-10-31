@@ -25,10 +25,16 @@
  */
 #include <event2/event.h>
 #include <event2/http.h>
+#include <event2/http_struct.h>
 #include <jansson.h> /* json */
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "ej_error.h"
+
+typedef struct {
+    unsigned int verbose;
+} ej_settings_t;
 
 /** 
  * @brief Run the JSON-RPC Handler
@@ -50,7 +56,7 @@ ej_run_handle(json_t *request, json_t **response)
 }
 
 static void
-http_api_cb(struct evhttp_request *req, void *arg)
+ej_api_cb(struct evhttp_request *req, void *arg)
 {
     ej_error_t *ej_err = NULL;
     json_error_t js_err;
@@ -61,33 +67,36 @@ http_api_cb(struct evhttp_request *req, void *arg)
     struct evbuffer *evb = evbuffer_new();
     struct evbuffer *evr = evhttp_request_get_input_buffer(req);
     ev_ssize_t request_length = evbuffer_get_length(evr);
+    ej_settings_t *settings = (ej_settings_t*) arg;
 
-#if 0
-    /* TODO: Not in libevent2 yet */
-    if (evhttp_request_get_type(req) != EVHTTP_REQ_POST) {
-        /* Format Empty Request */
-        ej_err = ej_error_create(EJ_ERROR_GENERAL, "Request not a HTTP POST");
+    /* Check for POST */
+    if (req->type != EVHTTP_REQ_POST) {
+        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
         js_rsp = ej_err->json;
+        json_incref(js_rsp);
         goto done;
     }
-#endif
 
     /* Check for an empty request */
     if (request_length == 0) {
-        /* Format Empty Request */
         ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
         js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
     }
     
-    json_request=evbuffer_pullup(evr, request_length);
+    json_request = evbuffer_pullup(evr, request_length);
     if (json_request == NULL) {
-        /* Format Empty Request */
         ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
         js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
+    }
+
+    if (settings->verbose) {
+        fprintf(stderr, "Request(%s:%i) %s\n",
+                req->remote_host,
+                req->remote_port, json_request);
     }
 
     /* Parse Request */
@@ -115,23 +124,53 @@ done:
 
     /* Free data */
     json_decref(js_rsp);
-
-    if (ej_err) {
-        ej_error_destroy(ej_err);        
-    }
+    if (ej_err) ej_error_destroy(ej_err);        
     evbuffer_free(evb);
+}
+
+void
+ej_init(ej_settings_t *settings)
+{
+    memset(settings, 0, sizeof(*settings));
 }
 
 int 
 main(int argc, const char *argv[])
 {
-    int port = 9009;
+    int ch;
+    const char *listen_addr = "0.0.0.0";
+    unsigned short port = 9009;
     struct event_base *base = event_base_new();
     struct evhttp *http = evhttp_new(base);
+    ej_settings_t settings;
 
-    evhttp_set_cb(http, "/api", http_api_cb, NULL);
+    ej_init(&settings);
 
-    evhttp_bind_socket(http, "127.0.0.1", port);
+    while (-1 != (ch = getopt(argc, argv,
+                              "p:"
+                              "l:"
+                              "v"
+                             ))) {
+        switch (ch) {
+            case 'p':
+                port = atoi(optarg);
+                break;
+            case 'l':
+                listen_addr = optarg;
+                break;
+            case 'v':
+                settings.verbose++;
+                break;
+        }
+    }
+
+    if (settings.verbose) {
+        fprintf(stderr, "%s\n", "ej");
+        fprintf(stderr, "Listening on %s:%i\n", listen_addr, port);
+    }
+
+    evhttp_set_cb(http, "/api", ej_api_cb, &settings);
+    evhttp_bind_socket(http, listen_addr, port);
 
     event_base_dispatch(base);
     return 0;
