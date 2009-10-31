@@ -37,29 +37,40 @@ ej_create_json_error(ej_error_t *err)
 
     {
         json_t *code_obj;
+        json_t *msg_obj;
         json_t *rpc_version = json_string("2.0");
         json_t *error_obj = json_object();
-        json_t *msg_obj = json_string(err->msg);
+        json_t *data_obj = json_string(err->msg);
         json_t *id_obj = err->id ? json_integer(err->id) : json_null();
 
         switch (err->errno) {
             case EJ_ERROR_PARSE:
                 code_obj = json_integer(-32700);
+                msg_obj = json_string("Parse error.");
                 break;
             case EJ_ERROR_INVALID_REQUEST:
                 code_obj = json_integer(-32600);
+                msg_obj = json_string("Invalid request.");
                 break;
             case EJ_ERROR_METHOD_NOT_FOUND:
                 code_obj = json_integer(-32601);
+                msg_obj = json_string("Method not found.");
                 break;
             case EJ_ERROR_INVALID_PARAMS:
                 code_obj = json_integer(-32602);
+                msg_obj = json_string("Invalid params.");
                 break;
             case EJ_ERROR_INTERNAL:
                 code_obj = json_integer(-32603);
+                msg_obj = json_string("Internal error.");
                 break;
             case EJ_ERROR_SERVER:
                 code_obj = json_integer(-32000);
+                msg_obj = json_string("Server error.");
+                break;
+            default:
+                code_obj = json_integer(-32001);
+                msg_obj = json_string("Error object not defined.");
                 break;
         }
 
@@ -68,6 +79,7 @@ ej_create_json_error(ej_error_t *err)
         json_object_set(err->json, "error", error_obj);
         json_object_set(error_obj, "code", code_obj);
         json_object_set(error_obj, "message", msg_obj);
+        json_object_set(error_obj, "data", data_obj);
 
         json_decref(code_obj);
         json_decref(msg_obj);
