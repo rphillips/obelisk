@@ -197,6 +197,8 @@ ej_api_cb(struct evhttp_request *req, void *arg)
         goto done;
     }
 
+    json_request[request_length] = 0;
+
     if (settings->verbose > 1) {
         fprintf(stderr, "Request(%s:%i) %s\n",
                 req->remote_host,
