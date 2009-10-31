@@ -40,10 +40,10 @@ typedef enum {
 typedef struct {
     ej_error_errno_t errno;
     json_t *json; 
+    json_t *id;
     unsigned int line;
     const char *file;
     char *msg;
-    int id;
 } ej_error_t;
 
 #define EJ_SUCCESS (NULL)
@@ -60,14 +60,14 @@ typedef struct {
                                                               __VA_ARGS__)
 
 ej_error_t*
-ej_error_create_impl(unsigned int id,
+ej_error_create_impl(json_t *id,
                      ej_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
                      const char *file);
 
 ej_error_t*
-ej_error_createf_impl(unsigned int id, 
+ej_error_createf_impl(json_t *id, 
                       ej_error_errno_t errno,
                       unsigned int line,
                       const char *file, 

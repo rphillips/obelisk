@@ -70,24 +70,21 @@ ej_execute_rpc(json_t *request, json_t **response)
     json_t *params;
     json_t *id;
     const char *method_string;
-    int i_id = 0;
     
     /* fetch the ID first and make sure we have it, because we need it later */
     if ((id = json_object_get(request, "id")) == NULL) {
-        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
                                  "id missing");
     }
-
-    i_id = json_integer_value(id);
 
     /* Check the method and params parameters */
     if ((method = json_object_get(request, "method")) == NULL ||
         (method_string = json_string_value(method)) == NULL) {
-        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
                                  "method missing");
     }
     else if ((params = json_object_get(request, "params")) == NULL) {
-        ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
+        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
                                  "params missing");
     }
     else {
@@ -102,20 +99,19 @@ ej_execute_rpc(json_t *request, json_t **response)
             ej_err = (*rpc->cb)(params, &result);
             if (ej_err == EJ_SUCCESS) {
                 json_t *rpc_version = json_string("2.0");
-                json_t *id_obj = json_integer(i_id);
 
                 *response = json_object();
                 json_object_set(*response, "jsonrpc", rpc_version);
                 json_object_set(*response, "result", result);
-                json_object_set(*response, "id", id_obj);
+                /* TODO: Wrong!!! need to copy the ID object */
+                /* json_object_set(*response, "id", id); */
 
                 json_decref(result);
                 json_decref(rpc_version);
-                json_decref(id_obj);
             }
         }
         else {
-            ej_err = ej_error_create(i_id, EJ_ERROR_METHOD_NOT_FOUND, "");
+            ej_err = ej_error_create(id, EJ_ERROR_METHOD_NOT_FOUND, "");
         }
     }
 
@@ -230,6 +226,12 @@ ej_api_cb(struct evhttp_request *req, void *arg)
 done:
     json_response = json_dumps(js_rsp, 0);
     if (json_response) {
+        if (settings->verbose > 1) {
+            fprintf(stderr, "Response(%s:%i): %s",
+                    req->remote_host,
+                    req->remote_port, 
+                    json_response);
+        }
         evbuffer_add(evb, json_response, strlen(json_response));
     }
     free(json_response);

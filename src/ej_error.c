@@ -41,7 +41,7 @@ ej_create_json_error(ej_error_t *err)
         json_t *rpc_version = json_string("2.0");
         json_t *error_obj = json_object();
         json_t *data_obj = json_string(err->msg);
-        json_t *id_obj = err->id ? json_integer(err->id) : json_null();
+        json_t *id_obj = err->id ? err->id : json_null();
 
         switch (err->errno) {
             case EJ_ERROR_PARSE:
@@ -90,7 +90,7 @@ ej_create_json_error(ej_error_t *err)
 }
 
 ej_error_t*
-ej_error_create_impl(unsigned int id, 
+ej_error_create_impl(json_t *id, 
                      ej_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
@@ -107,7 +107,7 @@ ej_error_create_impl(unsigned int id,
 }
 
 ej_error_t*
-ej_error_createf_impl(unsigned int id, 
+ej_error_createf_impl(json_t *id, 
                       ej_error_errno_t errno,
                       unsigned int line,
                       const char *file, 
