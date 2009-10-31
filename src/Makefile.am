@@ -8,4 +8,6 @@ ej_CFLAGS = \
 	-I$(top_srcdir)/deps/libevent/libevent
 ej_SOURCES = \
 	ej.c \
-	ej_error.c
+	ej_error.c \
+	main.c 
+

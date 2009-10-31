@@ -26,35 +26,11 @@
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/http_struct.h>
-#include <jansson.h> /* json */
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "ej.h"
 #include "ej_error.h"
-
-/***** REFACTOR THIS PORTION */
-ej_error_t* 
-time_cb(json_t *params, json_t **result)
-{
-    time_t current_time = time(NULL);
-    *result = json_integer(current_time);
-    return EJ_SUCCESS;
-}
-
-typedef struct {
-    const char *method;
-    ej_error_t* (*cb)(json_t *params, json_t **response);
-} ej_rpc_t;
-
-ej_rpc_t rpc_callbacks[] = {
-    {"time", time_cb}
-};
-
-/***** END */
-
-typedef struct {
-    unsigned int verbose;
-} ej_settings_t;
 
 static int
 compare_methods(const void * va, const void * vb)
@@ -63,7 +39,7 @@ compare_methods(const void * va, const void * vb)
 }
 
 static ej_error_t*
-ej_execute_rpc(json_t *request, json_t **response)
+ej_execute_rpc(json_t *request, json_t **response, ej_baton_t *baton)
 {
     ej_error_t *ej_err = EJ_SUCCESS;
     json_t *method; 
@@ -90,9 +66,9 @@ ej_execute_rpc(json_t *request, json_t **response)
     else {
         json_t *result;
         ej_rpc_t *rpc = bsearch(method_string, 
-                                rpc_callbacks,
-                                sizeof(rpc_callbacks) / sizeof(rpc_callbacks[0]),
-                                sizeof(rpc_callbacks[0]),
+                                baton->rpc,
+                                baton->rpc_size / sizeof(ej_rpc_t),
+                                sizeof(ej_rpc_t),
                                 compare_methods);
 
         if (rpc) {
@@ -125,12 +101,12 @@ ej_execute_rpc(json_t *request, json_t **response)
  * @return EJ_SUCCESS on success
  */
 static ej_error_t*
-ej_run_handle(json_t *request, json_t **response)
+ej_run_handle(json_t *request, json_t **response, ej_baton_t *baton)
 {
     ej_error_t *ej_err = EJ_SUCCESS;
     int array_size = json_array_size(request);
     if (array_size == 0) { /* Single RPC Call */
-        ej_err = ej_execute_rpc(request, response);
+        ej_err = ej_execute_rpc(request, response, baton);
     }
     else { /* Multi-RPC Call */
         int i;
@@ -143,7 +119,7 @@ ej_run_handle(json_t *request, json_t **response)
 
         for (i=0; i<array_size; i++) {
             req_element = json_array_get(request, i);
-            rsp_err = ej_execute_rpc(req_element, &rsp_element);
+            rsp_err = ej_execute_rpc(req_element, &rsp_element, baton);
             if (rsp_err) {
                 /* RPC call errored out */
                 json_array_append(*response, rsp_err->json);
@@ -159,7 +135,7 @@ ej_run_handle(json_t *request, json_t **response)
     return ej_err;
 }
 
-static void
+void
 ej_api_cb(struct evhttp_request *req, void *arg)
 {
     ej_error_t *ej_err = NULL;
@@ -171,7 +147,7 @@ ej_api_cb(struct evhttp_request *req, void *arg)
     struct evbuffer *evb = evbuffer_new();
     struct evbuffer *evr = evhttp_request_get_input_buffer(req);
     ev_ssize_t request_length = evbuffer_get_length(evr);
-    ej_settings_t *settings = (ej_settings_t*) arg;
+    ej_baton_t *baton = (ej_baton_t*) arg;
 
     /* Check for POST */
     if (req->type != EVHTTP_REQ_POST) {
@@ -199,7 +175,7 @@ ej_api_cb(struct evhttp_request *req, void *arg)
 
     json_request[request_length] = 0;
 
-    if (settings->verbose > 1) {
+    if (baton->settings->verbose > 1) {
         fprintf(stderr, "Request(%s:%i) %s\n",
                 req->remote_host,
                 req->remote_port, json_request);
@@ -216,7 +192,7 @@ ej_api_cb(struct evhttp_request *req, void *arg)
     }
 
     /* Run Handler */
-    ej_err = ej_run_handle(js_req, &js_rsp);
+    ej_err = ej_run_handle(js_req, &js_rsp, baton);
     if (ej_err) {
         ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, ej_err->msg);
         js_rsp = ej_err->json;
@@ -228,7 +204,7 @@ ej_api_cb(struct evhttp_request *req, void *arg)
 done:
     json_response = json_dumps(js_rsp, 0);
     if (json_response) {
-        if (settings->verbose > 1) {
+        if (baton->settings->verbose > 1) {
             fprintf(stderr, "Response(%s:%i): %s",
                     req->remote_host,
                     req->remote_port, 
@@ -250,47 +226,5 @@ void
 ej_init(ej_settings_t *settings)
 {
     memset(settings, 0, sizeof(*settings));
-}
-
-int 
-main(int argc, char **argv)
-{
-    int ch;
-    const char *listen_addr = "0.0.0.0";
-    unsigned short port = 9009;
-    struct event_base *base = event_base_new();
-    struct evhttp *http = evhttp_new(base);
-    ej_settings_t settings;
-
-    ej_init(&settings);
-
-    while (-1 != (ch = getopt(argc, argv,
-                              "p:"
-                              "l:"
-                              "v"
-                             ))) {
-        switch (ch) {
-            case 'p':
-                port = atoi(optarg);
-                break;
-            case 'l':
-                listen_addr = optarg;
-                break;
-            case 'v':
-                settings.verbose++;
-                break;
-        }
-    }
-
-    if (settings.verbose) {
-        fprintf(stderr, "%s\n", "ej");
-        fprintf(stderr, "Listening on %s:%i\n", listen_addr, port);
-    }
-
-    evhttp_set_cb(http, "/api", ej_api_cb, &settings);
-    evhttp_bind_socket(http, listen_addr, port);
-
-    event_base_dispatch(base);
-    return 0;
 }
 
