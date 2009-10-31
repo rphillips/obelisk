@@ -32,9 +32,35 @@
 #include <unistd.h>
 #include "ej_error.h"
 
+/***** REFACTOR THIS PORTION */
+ej_error_t* 
+time_cb(json_t *params, json_t **result)
+{
+    time_t current_time = time(NULL);
+    *result = json_integer(current_time);
+    return EJ_SUCCESS;
+}
+
+typedef struct {
+    const char *method;
+    ej_error_t* (*cb)(json_t *params, json_t **response);
+} ej_rpc_t;
+
+ej_rpc_t rpc_callbacks[] = {
+    {"time", time_cb}
+};
+
+/***** END */
+
 typedef struct {
     unsigned int verbose;
 } ej_settings_t;
+
+static int
+compare_methods(const void * va, const void * vb)
+{
+    return strcmp(va, ((ej_rpc_t*)vb)->method);
+}
 
 static ej_error_t*
 ej_execute_rpc(json_t *request, json_t **response)
@@ -43,6 +69,7 @@ ej_execute_rpc(json_t *request, json_t **response)
     json_t *method; 
     json_t *params;
     json_t *id;
+    const char *method_string;
     int i_id = 0;
     
     /* fetch the ID first and make sure we have it, because we need it later */
@@ -54,7 +81,8 @@ ej_execute_rpc(json_t *request, json_t **response)
     i_id = json_integer_value(id);
 
     /* Check the method and params parameters */
-    if ((method = json_object_get(request, "method")) == NULL) {
+    if ((method = json_object_get(request, "method")) == NULL ||
+        (method_string = json_string_value(method)) == NULL) {
         ej_err = ej_error_create(i_id, EJ_ERROR_INVALID_REQUEST, 
                                  "method missing");
     }
@@ -63,11 +91,31 @@ ej_execute_rpc(json_t *request, json_t **response)
                                  "params missing");
     }
     else {
-        *response = json_object();
-        {
-            json_t *json_str = json_string("Hello World");
-            json_object_set(*response, "universe", json_str);
-            json_decref(json_str);
+        json_t *result;
+        ej_rpc_t *rpc = bsearch(method_string, 
+                                rpc_callbacks,
+                                sizeof(rpc_callbacks) / sizeof(rpc_callbacks[0]),
+                                sizeof(rpc_callbacks[0]),
+                                compare_methods);
+
+        if (rpc) {
+            ej_err = (*rpc->cb)(params, &result);
+            if (ej_err == EJ_SUCCESS) {
+                json_t *rpc_version = json_string("2.0");
+                json_t *id_obj = json_integer(i_id);
+
+                *response = json_object();
+                json_object_set(*response, "jsonrpc", rpc_version);
+                json_object_set(*response, "result", result);
+                json_object_set(*response, "id", id_obj);
+
+                json_decref(result);
+                json_decref(rpc_version);
+                json_decref(id_obj);
+            }
+        }
+        else {
+            ej_err = ej_error_create(i_id, EJ_ERROR_METHOD_NOT_FOUND, "");
         }
     }
 
