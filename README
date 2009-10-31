@@ -1,5 +1,12 @@
-event-json is a fast JSON RPC server build upon libevent2. The JSON-RPC 2.0
-specification will be implemented shortly.
+event-json is a fast JSON RPC server build upon libevent2. 
+
+GIT Checkout
+============
+
+# git clone git://github.com/rphillips/event-json.git
+# cd event-json
+# git submodule init
+# git submodule update
 
 Compile
 =======
