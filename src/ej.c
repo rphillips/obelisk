@@ -79,8 +79,7 @@ ej_execute_rpc(json_t *request, json_t **response, ej_baton_t *baton)
                 *response = json_object();
                 json_object_set(*response, "jsonrpc", rpc_version);
                 json_object_set(*response, "result", result);
-                /* TODO: Wrong!!! need to copy the ID object */
-                /* json_object_set(*response, "id", id); */
+                json_object_set(*response, "id", id);
 
                 json_decref(result);
                 json_decref(rpc_version);
