@@ -1,13 +1,12 @@
-bin_PROGRAMS = ej
-ej_LDADD = \
+bin_PROGRAMS = obelisk
+obelisk_LDADD = \
 	$(top_srcdir)/deps/libevent/libevent/libevent.la \
 	$(top_srcdir)/deps/jansson/src/libjansson.la
-ej_CFLAGS = \
+obelisk_CFLAGS = \
 	-I$(top_srcdir)/deps/jansson/src \
 	-I$(top_srcdir)/deps/libevent/libevent/include \
 	-I$(top_srcdir)/deps/libevent/libevent
-ej_SOURCES = \
-	ej.c \
-	ej_error.c \
-	main.c 
-
+obelisk_SOURCES = \
+	obelisk.c \
+	obelisk_error.c \
+	obelisk_main.c 

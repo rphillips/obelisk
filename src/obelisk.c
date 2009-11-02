@@ -29,19 +29,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "ej.h"
-#include "ej_error.h"
+#include "obelisk.h"
+#include "obelisk_error.h"
 
 static int
 compare_methods(const void * va, const void * vb)
 {
-    return strcmp(va, ((ej_rpc_t*)vb)->method);
+    return strcmp(va, ((obelisk_rpc_t*)vb)->method);
 }
 
-static ej_error_t*
-ej_execute_rpc(json_t *request, json_t **response, ej_baton_t *baton)
+static obelisk_error_t*
+obelisk_execute_rpc(json_t *request, json_t **response, obelisk_baton_t *baton)
 {
-    ej_error_t *ej_err = EJ_SUCCESS;
+    obelisk_error_t *obelisk_err = OBELISK_SUCCESS;
     json_t *method; 
     json_t *params;
     json_t *id;
@@ -49,31 +49,31 @@ ej_execute_rpc(json_t *request, json_t **response, ej_baton_t *baton)
     
     /* fetch the ID first and make sure we have it, because we need it later */
     if ((id = json_object_get(request, "id")) == NULL) {
-        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
+        obelisk_err = obelisk_error_create(id, OBELISK_ERROR_INVALID_REQUEST, 
                                  "id missing");
     }
 
     /* Check the method and params parameters */
     if ((method = json_object_get(request, "method")) == NULL ||
         (method_string = json_string_value(method)) == NULL) {
-        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
+        obelisk_err = obelisk_error_create(id, OBELISK_ERROR_INVALID_REQUEST, 
                                  "method missing");
     }
     else if ((params = json_object_get(request, "params")) == NULL) {
-        ej_err = ej_error_create(id, EJ_ERROR_INVALID_REQUEST, 
+        obelisk_err = obelisk_error_create(id, OBELISK_ERROR_INVALID_REQUEST, 
                                  "params missing");
     }
     else {
         json_t *result;
-        ej_rpc_t *rpc = bsearch(method_string, 
+        obelisk_rpc_t *rpc = bsearch(method_string, 
                                 baton->rpc,
-                                baton->rpc_size / sizeof(ej_rpc_t),
-                                sizeof(ej_rpc_t),
+                                baton->rpc_size / sizeof(obelisk_rpc_t),
+                                sizeof(obelisk_rpc_t),
                                 compare_methods);
 
         if (rpc) {
-            ej_err = (*rpc->cb)(params, &result);
-            if (ej_err == EJ_SUCCESS) {
+            obelisk_err = (*rpc->cb)(params, &result);
+            if (obelisk_err == OBELISK_SUCCESS) {
                 json_t *rpc_version = json_string("2.0");
 
                 *response = json_object();
@@ -86,43 +86,43 @@ ej_execute_rpc(json_t *request, json_t **response, ej_baton_t *baton)
             }
         }
         else {
-            ej_err = ej_error_create(id, EJ_ERROR_METHOD_NOT_FOUND, "");
+            obelisk_err = obelisk_error_create(id, OBELISK_ERROR_METHOD_NOT_FOUND, "");
         }
     }
 
-    return ej_err;
+    return obelisk_err;
 }
 
 /** 
  * @brief Run the JSON-RPC handler
  * @param request The entire request object
  * @param response response object, freed by caller
- * @return EJ_SUCCESS on success
+ * @return obelisk_SUCCESS on success
  */
-static ej_error_t*
-ej_run_handle(json_t *request, json_t **response, ej_baton_t *baton)
+static obelisk_error_t*
+obelisk_run_handle(json_t *request, json_t **response, obelisk_baton_t *baton)
 {
-    ej_error_t *ej_err = EJ_SUCCESS;
+    obelisk_error_t *obelisk_err = OBELISK_SUCCESS;
     int array_size = json_array_size(request);
     if (array_size == 0) { /* Single RPC Call */
-        ej_err = ej_execute_rpc(request, response, baton);
+        obelisk_err = obelisk_execute_rpc(request, response, baton);
     }
     else { /* Multi-RPC Call */
         int i;
         json_t *rsp_element;
         json_t *req_element;
-        ej_error_t *rsp_err;
+        obelisk_error_t *rsp_err;
 
         /* Create response array */
         *response = json_array();
 
         for (i=0; i<array_size; i++) {
             req_element = json_array_get(request, i);
-            rsp_err = ej_execute_rpc(req_element, &rsp_element, baton);
+            rsp_err = obelisk_execute_rpc(req_element, &rsp_element, baton);
             if (rsp_err) {
                 /* RPC call errored out */
                 json_array_append(*response, rsp_err->json);
-                ej_error_destroy(rsp_err);
+                obelisk_error_destroy(rsp_err);
             }
             else {
                 json_array_append(*response, rsp_element);
@@ -131,13 +131,13 @@ ej_run_handle(json_t *request, json_t **response, ej_baton_t *baton)
         }
     }
 
-    return ej_err;
+    return obelisk_err;
 }
 
 void
-ej_api_cb(struct evhttp_request *req, void *arg)
+obelisk_api_cb(struct evhttp_request *req, void *arg)
 {
-    ej_error_t *ej_err = NULL;
+    obelisk_error_t *obelisk_err = NULL;
     json_error_t js_err;
     json_t *js_rsp;
     json_t *js_req;
@@ -146,28 +146,26 @@ ej_api_cb(struct evhttp_request *req, void *arg)
     struct evbuffer *evb = evbuffer_new();
     struct evbuffer *evr = evhttp_request_get_input_buffer(req);
     ev_ssize_t request_length = evbuffer_get_length(evr);
-    ej_baton_t *baton = (ej_baton_t*) arg;
+    obelisk_baton_t *baton = (obelisk_baton_t*) arg;
 
     /* Check for POST */
     if (req->type != EVHTTP_REQ_POST) {
-        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
-        js_rsp = ej_err->json;
         json_incref(js_rsp);
         goto done;
     }
 
     /* Check for an empty request */
     if (request_length == 0) {
-        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
-        js_rsp = ej_err->json;
+        obelisk_err = obelisk_error_create(0, OBELISK_ERROR_INVALID_REQUEST, "Empty Request");
+        js_rsp = obelisk_err->json;
         json_incref(js_rsp);
         goto done;
     }
     
     json_request = evbuffer_pullup(evr, request_length);
     if (json_request == NULL) {
-        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, "Empty Request");
-        js_rsp = ej_err->json;
+        obelisk_err = obelisk_error_create(0, OBELISK_ERROR_INVALID_REQUEST, "Empty Request");
+        js_rsp = obelisk_err->json;
         json_incref(js_rsp);
         goto done;
     }
@@ -184,17 +182,17 @@ ej_api_cb(struct evhttp_request *req, void *arg)
     js_req = json_loads(json_request, &js_err);
     if (js_req == NULL) {
         /* Format Parse Error */
-        ej_err = ej_error_create(0, EJ_ERROR_PARSE, js_err.text);
-        js_rsp = ej_err->json;
+        obelisk_err = obelisk_error_create(0, OBELISK_ERROR_PARSE, js_err.text);
+        js_rsp = obelisk_err->json;
         json_incref(js_rsp);
         goto done;
     }
 
     /* Run Handler */
-    ej_err = ej_run_handle(js_req, &js_rsp, baton);
-    if (ej_err) {
-        ej_err = ej_error_create(0, EJ_ERROR_INVALID_REQUEST, ej_err->msg);
-        js_rsp = ej_err->json;
+    obelisk_err = obelisk_run_handle(js_req, &js_rsp, baton);
+    if (obelisk_err) {
+        obelisk_err = obelisk_error_create(0, OBELISK_ERROR_INVALID_REQUEST, obelisk_err->msg);
+        js_rsp = obelisk_err->json;
         json_incref(js_rsp);
         goto done;
     }
@@ -217,12 +215,12 @@ done:
 
     /* Free data */
     json_decref(js_rsp);
-    if (ej_err) ej_error_destroy(ej_err);        
+    if (obelisk_err) obelisk_error_destroy(obelisk_err);        
     evbuffer_free(evb);
 }
 
 void
-ej_init(ej_settings_t *settings)
+obelisk_init(obelisk_settings_t *settings)
 {
     memset(settings, 0, sizeof(*settings));
 }

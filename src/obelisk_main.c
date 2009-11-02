@@ -29,18 +29,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "ej.h"
-#include "ej_error.h"
+#include "obelisk.h"
 
-ej_error_t* 
+obelisk_error_t* 
 time_cb(json_t *params, json_t **result)
 {
     time_t current_time = time(NULL);
     *result = json_integer(current_time);
-    return EJ_SUCCESS;
+    return OBELISK_SUCCESS;
 }
 
-ej_rpc_t rpc_callbacks[] = {
+obelisk_rpc_t rpc_callbacks[] = {
     {"time", time_cb}
 };
 
@@ -52,10 +51,10 @@ main(int argc, char **argv)
     unsigned short port = 9009;
     struct event_base *base = event_base_new();
     struct evhttp *http = evhttp_new(base);
-    ej_settings_t settings;
-    ej_baton_t baton;
+    obelisk_settings_t settings;
+    obelisk_baton_t baton;
 
-    ej_init(&settings);
+    obelisk_init(&settings);
     baton.settings = &settings;
     baton.rpc = &rpc_callbacks;
     baton.rpc_size = sizeof(rpc_callbacks);
@@ -83,7 +82,7 @@ main(int argc, char **argv)
         fprintf(stderr, "Listening on %s:%i\n", listen_addr, port);
     }
 
-    evhttp_set_cb(http, "/api", ej_api_cb, &baton);
+    evhttp_set_cb(http, "/api", obelisk_api_cb, &baton);
     evhttp_bind_socket(http, listen_addr, port);
 
     event_base_dispatch(base);

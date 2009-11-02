@@ -23,58 +23,58 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef EJ_ERROR_H_
-#define EJ_ERROR_H_
+#ifndef OBELISK_ERROR_H_
+#define OBELISK_ERROR_H_
 
 struct json_t;
 
 typedef enum {
-    EJ_ERROR_PARSE,
-    EJ_ERROR_INVALID_REQUEST,
-    EJ_ERROR_METHOD_NOT_FOUND,
-    EJ_ERROR_INVALID_PARAMS,
-    EJ_ERROR_INTERNAL,
-    EJ_ERROR_SERVER,
-} ej_error_errno_t;
+    OBELISK_ERROR_PARSE,
+    OBELISK_ERROR_INVALID_REQUEST,
+    OBELISK_ERROR_METHOD_NOT_FOUND,
+    OBELISK_ERROR_INVALID_PARAMS,
+    OBELISK_ERROR_INTERNAL,
+    OBELISK_ERROR_SERVER,
+} obelisk_error_errno_t;
 
 typedef struct {
-    ej_error_errno_t errno;
+    obelisk_error_errno_t errno;
     json_t *json; 
     json_t *id;
     unsigned int line;
     const char *file;
     char *msg;
-} ej_error_t;
+} obelisk_error_t;
 
-#define EJ_SUCCESS (NULL)
+#define OBELISK_SUCCESS (NULL)
 
-#define ej_error_create(id, err, msg) ej_error_create_impl(id, err,      \
+#define obelisk_error_create(id, err, msg) obelisk_error_create_impl(id, err,      \
                                                        msg,      \
                                                        __LINE__, \
                                                        __FILE__)
 
-#define ej_error_createf(id, err, fmt, ...) ej_error_createf_impl(id, err,      \
+#define obelisk_error_createf(id, err, fmt, ...) obelisk_error_createf_impl(id, err,      \
                                                               __LINE__, \
                                                               __FILE__, \
                                                               fmt,      \
                                                               __VA_ARGS__)
 
-ej_error_t*
-ej_error_create_impl(json_t *id,
-                     ej_error_errno_t errno,
+obelisk_error_t*
+obelisk_error_create_impl(json_t *id,
+                     obelisk_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
                      const char *file);
 
-ej_error_t*
-ej_error_createf_impl(json_t *id, 
-                      ej_error_errno_t errno,
+obelisk_error_t*
+obelisk_error_createf_impl(json_t *id, 
+                      obelisk_error_errno_t errno,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,
                       ...);
 
 void
-ej_error_destroy(ej_error_t *err);
+obelisk_error_destroy(obelisk_error_t *err);
 
 #endif

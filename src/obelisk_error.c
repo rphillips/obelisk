@@ -28,10 +28,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include "ej_error.h"
+#include "obelisk_error.h"
 
 static void
-ej_create_json_error(ej_error_t *err)
+obelisk_create_json_error(obelisk_error_t *err)
 {
     err->json = json_object();
 
@@ -44,27 +44,27 @@ ej_create_json_error(ej_error_t *err)
         json_t *id_obj = err->id ? err->id : json_null();
 
         switch (err->errno) {
-            case EJ_ERROR_PARSE:
+            case OBELISK_ERROR_PARSE:
                 code_obj = json_integer(-32700);
                 msg_obj = json_string("Parse error.");
                 break;
-            case EJ_ERROR_INVALID_REQUEST:
+            case OBELISK_ERROR_INVALID_REQUEST:
                 code_obj = json_integer(-32600);
                 msg_obj = json_string("Invalid request.");
                 break;
-            case EJ_ERROR_METHOD_NOT_FOUND:
+            case OBELISK_ERROR_METHOD_NOT_FOUND:
                 code_obj = json_integer(-32601);
                 msg_obj = json_string("Method not found.");
                 break;
-            case EJ_ERROR_INVALID_PARAMS:
+            case OBELISK_ERROR_INVALID_PARAMS:
                 code_obj = json_integer(-32602);
                 msg_obj = json_string("Invalid params.");
                 break;
-            case EJ_ERROR_INTERNAL:
+            case OBELISK_ERROR_INTERNAL:
                 code_obj = json_integer(-32603);
                 msg_obj = json_string("Internal error.");
                 break;
-            case EJ_ERROR_SERVER:
+            case OBELISK_ERROR_SERVER:
                 code_obj = json_integer(-32000);
                 msg_obj = json_string("Server error.");
                 break;
@@ -89,33 +89,33 @@ ej_create_json_error(ej_error_t *err)
     }
 }
 
-ej_error_t*
-ej_error_create_impl(json_t *id, 
-                     ej_error_errno_t errno,
+obelisk_error_t*
+obelisk_error_create_impl(json_t *id, 
+                     obelisk_error_errno_t errno,
                      const char *msg,
                      unsigned int line,
                      const char *file)
 {
-    ej_error_t *err = malloc(sizeof(*err));
+    obelisk_error_t *err = malloc(sizeof(*err));
     err->errno = errno;
     err->line = line;
     err->file = file;
     err->id = id;
     err->msg = strdup(msg);
-    ej_create_json_error(err);
+    obelisk_create_json_error(err);
     return err;
 }
 
-ej_error_t*
-ej_error_createf_impl(json_t *id, 
-                      ej_error_errno_t errno,
+obelisk_error_t*
+obelisk_error_createf_impl(json_t *id, 
+                      obelisk_error_errno_t errno,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,
                       ...)
 {
     va_list args;
-    ej_error_t *err;
+    obelisk_error_t *err;
 
     err = malloc(sizeof(*err));
     err->errno = errno;
@@ -127,13 +127,13 @@ ej_error_createf_impl(json_t *id,
     vasprintf(&err->msg, fmt, args);
     va_end(args);
 
-    ej_create_json_error(err);
+    obelisk_create_json_error(err);
 
     return err;
 }
 
 void
-ej_error_destroy(ej_error_t *err)
+obelisk_error_destroy(obelisk_error_t *err)
 {
     if (err && err->json) {
         json_decref(err->json);

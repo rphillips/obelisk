@@ -23,32 +23,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef EJ_H_
-#define EJ_H_
+#ifndef OBELISK_H_
+#define OBELISK_H_
 
 #include <jansson.h> /* json */
-#include "ej_error.h"
+#include "obelisk_error.h"
 
 /* RPC Callbacks */
 typedef struct {
     const char *method;
-    ej_error_t* (*cb)(json_t *params, json_t **response);
-} ej_rpc_t;
+    obelisk_error_t* (*cb)(json_t *params, json_t **response);
+} obelisk_rpc_t;
 
 typedef struct {
     unsigned int verbose;
-} ej_settings_t;
+} obelisk_settings_t;
 
 typedef struct {
-    ej_settings_t *settings;
-    ej_rpc_t *rpc;
+    obelisk_settings_t *settings;
+    obelisk_rpc_t *rpc;
     unsigned int rpc_size;
-} ej_baton_t;
+} obelisk_baton_t;
 
 void
-ej_init(ej_settings_t *settings);
+obelisk_init(obelisk_settings_t *settings);
 
 void
-ej_api_cb(struct evhttp_request *req, void *arg);
+obelisk_api_cb(struct evhttp_request *req, void *arg);
 
 #endif

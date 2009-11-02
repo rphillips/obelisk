@@ -1,10 +1,10 @@
-event-json is a fast JSON RPC server build upon libevent2. 
+obelisk is a fast JSON RPC server build upon libevent2. 
 
 GIT Checkout
 ============
 
-# git clone git://github.com/rphillips/event-json.git
-# cd event-json
+# git clone git://github.com/rphillips/obelisk.git
+# cd obelisk
 # git submodule init
 # git submodule update
 
@@ -18,4 +18,4 @@ Compile
 Running
 =======
 
-# src/ej
+# src/obelisk
