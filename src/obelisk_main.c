@@ -47,10 +47,6 @@ int
 main(int argc, char **argv)
 {
     int ch;
-    const char *listen_addr = "0.0.0.0";
-    unsigned short port = 9009;
-    struct event_base *base = event_base_new();
-    struct evhttp *http = evhttp_new(base);
     obelisk_settings_t settings;
     obelisk_baton_t baton;
 
@@ -63,28 +59,32 @@ main(int argc, char **argv)
                               "p:"
                               "l:"
                               "v"
+                              "d"
                              ))) {
         switch (ch) {
             case 'p':
-                port = atoi(optarg);
+                settings.port = atoi(optarg);
                 break;
             case 'l':
-                listen_addr = optarg;
+                settings.bindaddr = optarg;
                 break;
             case 'v':
                 settings.verbose++;
+                break;
+            case 'd':
+                settings.daemonize = 1;
                 break;
         }
     }
 
     if (settings.verbose) {
-        fprintf(stderr, "%s\n", "ej");
-        fprintf(stderr, "Listening on %s:%i\n", listen_addr, port);
+        fprintf(stderr, "%s\n", "obelisk");
+        fprintf(stderr, "Listening on %s:%i\n", 
+                settings.bindaddr ? settings.bindaddr : "0.0.0.0", 
+                settings.port);
     }
 
-    evhttp_set_cb(http, "/api", obelisk_api_cb, &baton);
-    evhttp_bind_socket(http, listen_addr, port);
+    obelisk_run(&settings);
 
-    event_base_dispatch(base);
     return 0;
 }

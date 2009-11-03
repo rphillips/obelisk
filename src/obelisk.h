@@ -29,6 +29,8 @@
 #include <jansson.h> /* json */
 #include "obelisk_error.h"
 
+#define OBELISK_DEFAULT_PORT 10351
+
 /* RPC Callbacks */
 typedef struct {
     const char *method;
@@ -37,18 +39,21 @@ typedef struct {
 
 typedef struct {
     unsigned int verbose;
+    unsigned int daemonize;
+    const char *bindaddr;
+    unsigned short port;
 } obelisk_settings_t;
 
 typedef struct {
     obelisk_settings_t *settings;
     obelisk_rpc_t *rpc;
-    unsigned int rpc_size;
+    size_t rpc_size;
 } obelisk_baton_t;
 
 void
 obelisk_init(obelisk_settings_t *settings);
 
-void
-obelisk_api_cb(struct evhttp_request *req, void *arg);
+void 
+obelisk_run(obelisk_settings_t *settings);
 
 #endif

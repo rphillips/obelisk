@@ -43,7 +43,7 @@ obelisk_create_json_error(obelisk_error_t *err)
         json_t *data_obj = json_string(err->msg);
         json_t *id_obj = err->id ? err->id : json_null();
 
-        switch (err->errno) {
+        switch (err->err) {
             case OBELISK_ERROR_PARSE:
                 code_obj = json_integer(-32700);
                 msg_obj = json_string("Parse error.");
@@ -91,13 +91,13 @@ obelisk_create_json_error(obelisk_error_t *err)
 
 obelisk_error_t*
 obelisk_error_create_impl(json_t *id, 
-                     obelisk_error_errno_t errno,
+                     obelisk_error_errno_t e,
                      const char *msg,
                      unsigned int line,
                      const char *file)
 {
-    obelisk_error_t *err = malloc(sizeof(*err));
-    err->errno = errno;
+    obelisk_error_t *err = malloc(sizeof(obelisk_error_t));
+    err->err = e;
     err->line = line;
     err->file = file;
     err->id = id;
@@ -108,7 +108,7 @@ obelisk_error_create_impl(json_t *id,
 
 obelisk_error_t*
 obelisk_error_createf_impl(json_t *id, 
-                      obelisk_error_errno_t errno,
+                      obelisk_error_errno_t e,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,
@@ -118,7 +118,7 @@ obelisk_error_createf_impl(json_t *id,
     obelisk_error_t *err;
 
     err = malloc(sizeof(*err));
-    err->errno = errno;
+    err->err = e;
     err->line = line;
     err->file = file;
     err->id = id;

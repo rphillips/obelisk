@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include "obelisk.h"
 #include "obelisk_error.h"
 
@@ -134,7 +135,7 @@ obelisk_run_handle(json_t *request, json_t **response, obelisk_baton_t *baton)
     return obelisk_err;
 }
 
-void
+static void
 obelisk_api_cb(struct evhttp_request *req, void *arg)
 {
     obelisk_error_t *obelisk_err = NULL;
@@ -223,5 +224,52 @@ void
 obelisk_init(obelisk_settings_t *settings)
 {
     memset(settings, 0, sizeof(*settings));
+    settings->port = OBELISK_DEFAULT_PORT;
 }
 
+void 
+obelisk_run(obelisk_settings_t *settings)
+{
+    if (settings->daemonize) {
+        pid_t pid, sid;
+
+        if (settings->verbose) {
+            fprintf(stderr, "becoming a daemon\n");
+        }
+
+        pid = fork();
+        if (pid < 0) {
+            fprintf(stderr, "fork error %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        if (pid > 0) {
+            exit(0);
+        }
+
+        umask(0);
+
+        sid = setsid();
+        if (sid < 0) {
+            exit(EXIT_FAILURE);
+        }
+
+        if (chdir("/") < 0) {
+            exit(EXIT_FAILURE);
+        }
+
+        freopen( "/dev/null", "r", stdin);
+        freopen( "/dev/null", "w", stdout);
+        freopen( "/dev/null", "w", stderr);
+    }
+
+    {
+        struct event_base *base = event_base_new();
+        struct evhttp *http = evhttp_new(base);
+
+        evhttp_set_cb(http, "/api", obelisk_api_cb, settings);
+        evhttp_bind_socket(http, settings->bindaddr, settings->port);
+
+        event_base_dispatch(base);
+    }
+}
