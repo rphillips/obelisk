@@ -224,6 +224,37 @@ done:
     evbuffer_free(evb);
 }
 
+static void
+obelisk_daemonize(obelisk_settings_t *settings)
+{
+    pid_t pid, sid;
+
+    pid = fork();
+    if (pid < 0) {
+        fprintf(stderr, "fork error %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        exit(0);
+    }
+
+    umask(0);
+
+    sid = setsid();
+    if (sid < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (chdir("/") < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    freopen( "/dev/null", "r", stdin);
+    freopen( "/dev/null", "w", stdout);
+    freopen( "/dev/null", "w", stderr);
+}
+
 void
 obelisk_init(obelisk_settings_t *settings)
 {
@@ -234,37 +265,13 @@ obelisk_init(obelisk_settings_t *settings)
 void 
 obelisk_run(obelisk_baton_t *baton)
 {
-    if (baton->settings->daemonize) {
-        pid_t pid, sid;
+    obelisk_settings_t *settings = baton->settings;
 
-        if (baton->settings->verbose) {
+    if (settings->daemonize) {
+        if (settings->verbose) {
             fprintf(stderr, "becoming a daemon\n");
         }
-
-        pid = fork();
-        if (pid < 0) {
-            fprintf(stderr, "fork error %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        if (pid > 0) {
-            exit(0);
-        }
-
-        umask(0);
-
-        sid = setsid();
-        if (sid < 0) {
-            exit(EXIT_FAILURE);
-        }
-
-        if (chdir("/") < 0) {
-            exit(EXIT_FAILURE);
-        }
-
-        freopen( "/dev/null", "r", stdin);
-        freopen( "/dev/null", "w", stdout);
-        freopen( "/dev/null", "w", stderr);
+        obelisk_daemonize(settings);
     }
 
     {
@@ -272,7 +279,7 @@ obelisk_run(obelisk_baton_t *baton)
         struct evhttp *http = evhttp_new(base);
 
         evhttp_set_cb(http, "/api", obelisk_api_cb, baton);
-        evhttp_bind_socket(http, baton->settings->bindaddr, baton->settings->port);
+        evhttp_bind_socket(http, settings->bindaddr, settings->port);
 
         event_base_dispatch(base);
     }
