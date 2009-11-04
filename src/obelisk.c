@@ -178,7 +178,7 @@ obelisk_api_cb(struct evhttp_request *req, void *arg)
 
     if (baton->settings->verbose > 1) {
         fprintf(stderr, "Request(%s:%i) %s\n",
-                req->remote_host,
+                (req->remote_host) ? req->remote_host : "0.0.0.0", 
                 req->remote_port, json_request);
     }
 
@@ -232,12 +232,12 @@ obelisk_init(obelisk_settings_t *settings)
 }
 
 void 
-obelisk_run(obelisk_settings_t *settings)
+obelisk_run(obelisk_baton_t *baton)
 {
-    if (settings->daemonize) {
+    if (baton->settings->daemonize) {
         pid_t pid, sid;
 
-        if (settings->verbose) {
+        if (baton->settings->verbose) {
             fprintf(stderr, "becoming a daemon\n");
         }
 
@@ -271,8 +271,8 @@ obelisk_run(obelisk_settings_t *settings)
         struct event_base *base = event_base_new();
         struct evhttp *http = evhttp_new(base);
 
-        evhttp_set_cb(http, "/api", obelisk_api_cb, settings);
-        evhttp_bind_socket(http, settings->bindaddr, settings->port);
+        evhttp_set_cb(http, "/api", obelisk_api_cb, baton);
+        evhttp_bind_socket(http, baton->settings->bindaddr, baton->settings->port);
 
         event_base_dispatch(base);
     }

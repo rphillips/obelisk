@@ -84,7 +84,7 @@ main(int argc, char **argv)
                 settings.port);
     }
 
-    obelisk_run(&settings);
+    obelisk_run(&baton);
 
     return 0;
 }

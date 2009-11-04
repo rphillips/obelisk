@@ -54,6 +54,6 @@ void
 obelisk_init(obelisk_settings_t *settings);
 
 void 
-obelisk_run(obelisk_settings_t *settings);
+obelisk_run(obelisk_baton_t *baton);
 
 #endif
