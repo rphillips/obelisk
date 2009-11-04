@@ -23,38 +23,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef OBELISK_H_
-#define OBELISK_H_
+#include "obelisk.h"
 
-#include <jansson.h> /* json */
-#include "obelisk_json.h"
-#include "obelisk_error.h"
+json_t*
+obelisk_json_response(json_t *result, json_t *id)
+{
+    json_t *response;
+    json_t *rpc_version = json_string("2.0");
 
-#define OBELISK_DEFAULT_PORT 10351
+    response = json_object();
+    json_object_set(response, "jsonrpc", rpc_version);
+    json_object_set(response, "result", result);
+    json_object_set(response, "id", id);
 
-/* RPC Callbacks */
-typedef struct {
-    const char *method;
-    obelisk_error_t* (*cb)(json_t *params, json_t **response);
-} obelisk_rpc_t;
+    json_decref(rpc_version);
+    /* id does not need to be decref'ed since it is a shared reference */
 
-typedef struct {
-    unsigned int verbose;
-    unsigned int daemonize;
-    const char *bindaddr;
-    unsigned short port;
-} obelisk_settings_t;
+    return response;
+}
 
-typedef struct {
-    obelisk_settings_t *settings;
-    obelisk_rpc_t *rpc;
-    size_t rpc_size;
-} obelisk_baton_t;
-
-void
-obelisk_init(obelisk_settings_t *settings);
-
-void 
-obelisk_run(obelisk_baton_t *baton);
-
-#endif

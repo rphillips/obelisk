@@ -66,12 +66,11 @@ obelisk_execute_rpc(json_t *request, json_t **response, obelisk_baton_t *baton)
     }
     else {
         json_t *result;
-        json_t *rpc_version;
         obelisk_rpc_t *rpc = bsearch(method_string, 
-                                baton->rpc,
-                                baton->rpc_size / sizeof(obelisk_rpc_t),
-                                sizeof(obelisk_rpc_t),
-                                compare_methods);
+                                     baton->rpc,
+                                     baton->rpc_size / sizeof(obelisk_rpc_t),
+                                     sizeof(obelisk_rpc_t),
+                                     compare_methods);
         if (!rpc) {
             obelisk_err = obelisk_error_create(id, OBELISK_ERROR_METHOD_NOT_FOUND, "");
             goto done;
@@ -82,15 +81,9 @@ obelisk_execute_rpc(json_t *request, json_t **response, obelisk_baton_t *baton)
             goto done;
         }
 
-        rpc_version = json_string("2.0");
-
-        *response = json_object();
-        json_object_set(*response, "jsonrpc", rpc_version);
-        json_object_set(*response, "result", result);
-        json_object_set(*response, "id", id);
+        *response = obelisk_json_response(result, id);
 
         json_decref(result);
-        json_decref(rpc_version);
     }
 
 done:

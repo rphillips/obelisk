@@ -23,38 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef OBELISK_H_
-#define OBELISK_H_
+#ifndef OBELISK_JSON_H_
+#define OBELISK_JSON_H_
 
-#include <jansson.h> /* json */
-#include "obelisk_json.h"
-#include "obelisk_error.h"
+struct json_t;
 
-#define OBELISK_DEFAULT_PORT 10351
-
-/* RPC Callbacks */
-typedef struct {
-    const char *method;
-    obelisk_error_t* (*cb)(json_t *params, json_t **response);
-} obelisk_rpc_t;
-
-typedef struct {
-    unsigned int verbose;
-    unsigned int daemonize;
-    const char *bindaddr;
-    unsigned short port;
-} obelisk_settings_t;
-
-typedef struct {
-    obelisk_settings_t *settings;
-    obelisk_rpc_t *rpc;
-    size_t rpc_size;
-} obelisk_baton_t;
-
-void
-obelisk_init(obelisk_settings_t *settings);
-
-void 
-obelisk_run(obelisk_baton_t *baton);
+json_t*
+obelisk_json_response(json_t *result, json_t *id);
 
 #endif
