@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include "obelisk.h"
 #include "obelisk_error.h"
 
@@ -66,30 +67,26 @@ obelisk_execute_rpc(json_t *request, json_t **response, obelisk_baton_t *baton)
     else {
         json_t *result;
         obelisk_rpc_t *rpc = bsearch(method_string, 
-                                baton->rpc,
-                                baton->rpc_size / sizeof(obelisk_rpc_t),
-                                sizeof(obelisk_rpc_t),
-                                compare_methods);
-
-        if (rpc) {
-            obelisk_err = (*rpc->cb)(params, &result);
-            if (obelisk_err == OBELISK_SUCCESS) {
-                json_t *rpc_version = json_string("2.0");
-
-                *response = json_object();
-                json_object_set(*response, "jsonrpc", rpc_version);
-                json_object_set(*response, "result", result);
-                json_object_set(*response, "id", id);
-
-                json_decref(result);
-                json_decref(rpc_version);
-            }
-        }
-        else {
+                                     baton->rpc,
+                                     baton->rpc_size / sizeof(obelisk_rpc_t),
+                                     sizeof(obelisk_rpc_t),
+                                     compare_methods);
+        if (!rpc) {
             obelisk_err = obelisk_error_create(id, OBELISK_ERROR_METHOD_NOT_FOUND, "");
+            goto done;
         }
+
+        obelisk_err = (*rpc->cb)(params, &result);
+        if (obelisk_err) {
+            goto done;
+        }
+
+        *response = obelisk_json_response(result, id);
+
+        json_decref(result);
     }
 
+done:
     return obelisk_err;
 }
 
@@ -134,7 +131,7 @@ obelisk_run_handle(json_t *request, json_t **response, obelisk_baton_t *baton)
     return obelisk_err;
 }
 
-void
+static void
 obelisk_api_cb(struct evhttp_request *req, void *arg)
 {
     obelisk_error_t *obelisk_err = NULL;
@@ -174,7 +171,7 @@ obelisk_api_cb(struct evhttp_request *req, void *arg)
 
     if (baton->settings->verbose > 1) {
         fprintf(stderr, "Request(%s:%i) %s\n",
-                req->remote_host,
+                (req->remote_host) ? req->remote_host : "0.0.0.0", 
                 req->remote_port, json_request);
     }
 
@@ -211,6 +208,7 @@ done:
     }
     free(json_response);
 
+    /* Send the reply */
     evhttp_send_reply(req, HTTP_OK, "ej", evb);
 
     /* Free data */
@@ -219,9 +217,63 @@ done:
     evbuffer_free(evb);
 }
 
+static void
+obelisk_daemonize(obelisk_settings_t *settings)
+{
+    pid_t pid, sid;
+
+    pid = fork();
+    if (pid < 0) {
+        fprintf(stderr, "fork error %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        exit(0);
+    }
+
+    umask(0);
+
+    sid = setsid();
+    if (sid < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (chdir("/") < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    freopen( "/dev/null", "r", stdin);
+    freopen( "/dev/null", "w", stdout);
+    freopen( "/dev/null", "w", stderr);
+}
+
 void
 obelisk_init(obelisk_settings_t *settings)
 {
     memset(settings, 0, sizeof(*settings));
+    settings->port = OBELISK_DEFAULT_PORT;
 }
 
+void 
+obelisk_run(obelisk_baton_t *baton)
+{
+    obelisk_settings_t *settings = baton->settings;
+
+    if (settings->daemonize) {
+        if (settings->verbose) {
+            fprintf(stderr, "becoming a daemon\n");
+        }
+        obelisk_daemonize(settings);
+    }
+
+    {
+        struct event_base *base = event_base_new();
+        struct evhttp *http = evhttp_new(base);
+
+        evhttp_set_cb(http, "/api", obelisk_api_cb, baton);
+        evhttp_bind_socket(http, settings->bindaddr, settings->port);
+
+        event_base_dispatch(base);
+    }
+}

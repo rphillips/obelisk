@@ -38,7 +38,7 @@ typedef enum {
 } obelisk_error_errno_t;
 
 typedef struct {
-    obelisk_error_errno_t errno;
+    obelisk_error_errno_t err;
     json_t *json; 
     json_t *id;
     unsigned int line;
@@ -61,14 +61,14 @@ typedef struct {
 
 obelisk_error_t*
 obelisk_error_create_impl(json_t *id,
-                     obelisk_error_errno_t errno,
+                     obelisk_error_errno_t err,
                      const char *msg,
                      unsigned int line,
                      const char *file);
 
 obelisk_error_t*
 obelisk_error_createf_impl(json_t *id, 
-                      obelisk_error_errno_t errno,
+                      obelisk_error_errno_t err,
                       unsigned int line,
                       const char *file, 
                       const char *fmt,

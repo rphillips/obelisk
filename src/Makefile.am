@@ -9,4 +9,5 @@ obelisk_CFLAGS = \
 obelisk_SOURCES = \
 	obelisk.c \
 	obelisk_error.c \
+	obelisk_json.c \
 	obelisk_main.c 
