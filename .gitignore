@@ -1,6 +1,7 @@
 Makefile
 config.guess
-config.h
+obelisk_config.h
+*.swp
 *.in
 depcomp
 .libs
@@ -18,4 +19,5 @@ ltmain.sh
 missing
 stamp-h1
 *.o
-ej
+obelisk
+tags

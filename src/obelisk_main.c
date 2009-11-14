@@ -30,6 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "obelisk.h"
+#include "obelisk_config.h"
 
 obelisk_error_t* 
 time_cb(json_t *params, json_t **result)
@@ -42,6 +43,9 @@ time_cb(json_t *params, json_t **result)
 obelisk_rpc_t rpc_callbacks[] = {
     {"time", time_cb}
 };
+
+void
+usage();
 
 int 
 main(int argc, char **argv)
@@ -60,6 +64,7 @@ main(int argc, char **argv)
                               "l:"
                               "v"
                               "d"
+                              "h"
                              ))) {
         switch (ch) {
             case 'p':
@@ -73,6 +78,12 @@ main(int argc, char **argv)
                 break;
             case 'd':
                 settings.daemonize = 1;
+                break;
+            case 'h':
+                usage(argv[0]);
+                break;
+            default:
+                usage(argv[0]);
                 break;
         }
     }
@@ -88,3 +99,16 @@ main(int argc, char **argv)
 
     return 0;
 }
+
+void
+usage(const char *name)
+{
+    fprintf(stderr, "%s : JSON-RPC Server\n", PACKAGE_STRING);
+    fprintf(stderr, "-p <num>      port (default:%i)\n", OBELISK_DEFAULT_PORT);
+    fprintf(stderr, "-l <address>  bind address (default:all interfaces)\n");
+    fprintf(stderr, "-d            run as a daemon (default: foreground)\n");
+    fprintf(stderr, "-v            verbose\n");
+    fprintf(stderr, "-vv           more verbosity\n");
+    exit(0);
+}
+
