@@ -212,7 +212,6 @@ done:
     evhttp_send_reply(req, HTTP_OK, "ej", evb);
 
     /* Free data */
-    json_decref(js_rsp);
     if (obelisk_err) obelisk_error_destroy(obelisk_err);        
     evbuffer_free(evb);
 }
