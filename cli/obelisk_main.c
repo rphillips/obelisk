@@ -59,6 +59,8 @@ main(int argc, char **argv)
     baton.rpc = &rpc_callbacks;
     baton.rpc_size = sizeof(rpc_callbacks);
 
+    fprintf(stderr, "%s : JSON-RPC Server\n", PACKAGE_STRING);
+
     while (-1 != (ch = getopt(argc, argv,
                               "p:"
                               "l:"
@@ -89,7 +91,6 @@ main(int argc, char **argv)
     }
 
     if (settings.verbose) {
-        fprintf(stderr, "%s\n", "obelisk");
         fprintf(stderr, "Listening on %s:%i\n", 
                 settings.bindaddr ? settings.bindaddr : "0.0.0.0", 
                 settings.port);
@@ -103,7 +104,6 @@ main(int argc, char **argv)
 void
 usage(const char *name)
 {
-    fprintf(stderr, "%s : JSON-RPC Server\n", PACKAGE_STRING);
     fprintf(stderr, "-p <num>      port (default:%i)\n", OBELISK_DEFAULT_PORT);
     fprintf(stderr, "-l <address>  bind address (default:all interfaces)\n");
     fprintf(stderr, "-d            run as a daemon (default: foreground)\n");
