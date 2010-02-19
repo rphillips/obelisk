@@ -13,9 +13,6 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/http_struct.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
